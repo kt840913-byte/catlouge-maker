@@ -57,12 +57,25 @@ app.get<{
            JOIN genres g2 ON g2.id = ag2.genre_id
            WHERE ag2.anime_id = a.id AND g2.name ILIKE $2
          ))
+         AND ($5::text IS NULL OR a.format = $5)
+         AND ($6::text IS NULL OR a.status = $6)
+         AND ($7::integer IS NULL OR a.season_year = $7)
        GROUP BY a.id
        ORDER BY a.id
        LIMIT $3 OFFSET $4`,
       [q || null, genre || null, limit, offset, format || null, status || null, year]
     );
     return { data: result.rows, pagination: { limit, offset, count: result.rowCount, hasMore: result.rowCount === limit } };
+  } catch (error) {
+    app.log.error(error);
+    return reply.code(500).send({ error: 'internal_server_error' });
+  }
+});
+
+app.get('/v1/studios', async (_request, reply) => {
+  try {
+    const result = await pool.query('SELECT id, name, website_url FROM studios ORDER BY name');
+    return { data: result.rows };
   } catch (error) {
     app.log.error(error);
     return reply.code(500).send({ error: 'internal_server_error' });
@@ -78,6 +91,8 @@ app.get<{ Params: { id: string } }>('/v1/anime/:id', async (request, reply) => {
     const result = await pool.query(
       `SELECT a.id, a.title, a.original_title, a.synopsis, a.format, a.status,
               a.season, a.season_year, a.episodes, a.release_date,
+              a.slug, a.cover_image_url, a.banner_image_url, a.source_material, a.age_rating,
+              a.average_score, a.popularity,
               COALESCE(
                 ARRAY_AGG(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL),
                 ARRAY[]::text[]
