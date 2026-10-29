@@ -2,8 +2,7 @@ import 'dotenv/config';
 import Fastify from 'fastify';
 import { pool } from './db.js';
 
-const app = Fastify({ logger: true });
-const port = Number(process.env.PORT ?? 3000);
+export const app = Fastify({ logger: true });
 
 app.get('/health', async (_request, reply) => {
   try {
@@ -119,9 +118,3 @@ app.addHook('onClose', async () => {
   await pool.end();
 });
 
-try {
-  await app.listen({ port, host: '0.0.0.0' });
-} catch (error) {
-  app.log.error(error);
-  process.exit(1);
-}
