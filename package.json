@@ -5,9 +5,9 @@
   "description": "Independent anime catalogue API",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch src/server.ts",
+    "dev": "tsx watch src/local.ts",
     "build": "tsc",
-    "start": "node dist/server.js",
+    "start": "node dist/local.js",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
