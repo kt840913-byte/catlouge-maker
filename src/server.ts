@@ -25,17 +25,25 @@ app.get('/v1/genres', async (_request, reply) => {
 });
 
 app.get<{
-  Querystring: { q?: string; genre?: string; limit?: string; offset?: string }
+  Querystring: { q?: string; genre?: string; format?: string; status?: string; year?: string; limit?: string; offset?: string }
 }>('/v1/anime', async (request, reply) => {
   const limit = Math.min(Math.max(Number(request.query.limit ?? 20) || 20, 1), 100);
   const offset = Math.max(Number(request.query.offset ?? 0) || 0, 0);
   const q = request.query.q?.trim();
   const genre = request.query.genre?.trim();
+  const format = request.query.format?.trim();
+  const status = request.query.status?.trim();
+  const year = request.query.year ? Number(request.query.year) : null;
+  if (year !== null && (!Number.isInteger(year) || year < 1900 || year > 2200)) {
+    return reply.code(400).send({ error: 'invalid_year', message: 'year must be an integer between 1900 and 2200.' });
+  }
 
   try {
     const result = await pool.query(
       `SELECT a.id, a.title, a.original_title, a.synopsis, a.format, a.status,
               a.season, a.season_year, a.episodes, a.release_date,
+              a.slug, a.cover_image_url, a.banner_image_url, a.source_material, a.age_rating,
+              a.average_score, a.popularity,
               COALESCE(
                 ARRAY_AGG(DISTINCT g.name) FILTER (WHERE g.name IS NOT NULL),
                 ARRAY[]::text[]
@@ -52,9 +60,9 @@ app.get<{
        GROUP BY a.id
        ORDER BY a.id
        LIMIT $3 OFFSET $4`,
-      [q || null, genre || null, limit, offset]
+      [q || null, genre || null, limit, offset, format || null, status || null, year]
     );
-    return { data: result.rows, pagination: { limit, offset, count: result.rowCount } };
+    return { data: result.rows, pagination: { limit, offset, count: result.rowCount, hasMore: result.rowCount === limit } };
   } catch (error) {
     app.log.error(error);
     return reply.code(500).send({ error: 'internal_server_error' });
